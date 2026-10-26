@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>俗韵新声 · 非遗影像研究</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    overflow: hidden;
+    font-family: "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif;
+    background: #1a1410;
+    color: #e8dcc8;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* =========== 全局风格 =========== */
+  .page {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    padding: 40px 28px;
+    display: flex;
+    flex-direction: column;
+    opacity: 0;
+    transform: translateY(40px);
+    transition: opacity 0.8s ease, transform 0.8s ease;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .page.active {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  .page::-webkit-scrollbar { display: none; }
+
+  /* 背景装饰 */
+  .bg-paper {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background:
+      radial-gradient(ellipse at 20% 10%, rgba(180, 60, 50, 0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 90%, rgba(200, 160, 80, 0.06) 0%, transparent 50%),
+      linear-gradient(180deg, #1a1410 0%, #0f0c09 100%);
+    z-index: -2;
+  }
+  .bg-texture {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  /* 导航指示器 */
+  .nav-dots {
+    position: fixed; right: 14px; top: 50%;
+    transform: translateY(-50%);
+    display: flex; flex-direction: column; gap: 10px;
+    z-index: 100;
+  }
+  .nav-dots span {
+    width: 6px; height: 6px; border-radius: 50%;
+    background: rgba(232, 220, 200, 0.25);
+    transition: all 0.3s ease;
+  }
+  .nav-dots span.active {
+    background: #c49a5a;
+    width: 6px; height: 20px; border-radius: 3px;
+  }
+
+  /* 页码 */
+  .page-num {
+    position: fixed; bottom: 16px; left: 20px;
+    font-size: 11px; color: rgba(232, 220, 200, 0.3);
+    letter-spacing: 2px;
+    z-index: 100;
+  }
+  .page-num .current { color: #c49a5a; font-size: 14px; font-weight: bold; }
+
+  /* =========== 封面页 =========== */
+  .cover { align-items: center; justify-content: center; text-align: center; }
+  .cover .seal {
+    width: 80px; height: 80px;
+    border: 3px solid #b43c32;
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; color: #b43c32; font-weight: bold;
+    letter-spacing: 2px;
+    margin-bottom: 30px;
+    transform: rotate(-5deg);
+    box-shadow: 0 0 30px rgba(180, 60, 50, 0.3);
+    animation: sealAppear 1.2s ease-out;
+  }
+  @keyframes sealAppear {
+    0% { opacity: 0; transform: rotate(-20deg) scale(0.5); }
+    60% { transform: rotate(-8deg) scale(1.1); }
+    100% { opacity: 1; transform: rotate(-5deg) scale(1); }
+  }
+  .cover h1 {
+    font-size: 48px; font-weight: 900;
+    letter-spacing: 12px;
+    background: linear-gradient(135deg, #e8dcc8 0%, #c49a5a 50%, #b43c32 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 16px;
+    animation: fadeUp 1s ease 0.3s both;
+  }
+  .cover .subtitle {
+    font-size: 14px; letter-spacing: 6px;
+    color: rgba(232, 220, 200, 0.5);
+    margin-bottom: 50px;
+    animation: fadeUp 1s ease 0.5s both;
+  }
+  .cover .ink-line {
+    width: 60px; height: 2px;
+    background: linear-gradient(90deg, transparent, #c49a5a, transparent);
+    margin-bottom: 40px;
+    animation: fadeUp 1s ease 0.7s both;
+  }
+  .cover .desc {
+    font-size: 13px; line-height: 2;
+    color: rgba(232, 220, 200, 0.6);
+    max-width: 280px;
+    animation: fadeUp 1s ease 0.9s both;
+  }
+  .cover .swipe-hint {
+    position: absolute; bottom: 60px;
+    font-size: 11px; color: rgba(232, 220, 200, 0.3);
+    letter-spacing: 4px;
+    animation: bounceUp 2s ease infinite;
+  }
+  @keyframes bounceUp {
+    0%, 100% { transform: translateY(0); opacity: 0.3; }
+    50% { transform: translateY(10px); opacity: 0.6; }
+  }
+
+  /* =========== 通用标题 =========== */
+  .page-header {
+    margin-bottom: 24px;
+    animation: fadeUp 0.8s ease;
+  }
+  .page-header .en {
+    font-size: 10px; letter-spacing: 4px;
+    color: #c49a5a; opacity: 0.7;
+    margin-bottom: 6px;
+  }
+  .page-header h2 {
+    font-size: 26px; font-weight: 700;
+    letter-spacing: 4px;
+    color: #e8dcc8;
+    position: relative;
+    padding-left: 16px;
+  }
+  .page-header h2::before {
+    content: '';
+    position: absolute; left: 0; top: 50%;
+    transform: translateY(-50%);
+    width: 4px; height: 24px;
+    background: linear-gradient(180deg, #b43c32, #c49a5a);
+    border-radius: 2px;
+  }
+  .page-header .line-ornament {
+    width: 40px; height: 1px; background: #c49a5a;
+    margin-top: 10px;
+  }
+
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* =========== 卡片 =========== */
+  .card {
+    background: linear-gradient(135deg, rgba(196, 154, 90, 0.08) 0%, rgba(180, 60, 50, 0.04) 100%);
+    border: 1px solid rgba(196, 154, 90, 0.15);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 14px;
+    animation: fadeUp 0.8s ease both;
+    backdrop-filter: blur(10px);
+  }
+  .card .tag {
+    display: inline-block;
+    font-size: 10px; letter-spacing: 2px;
+    color: #b43c32;
+    border: 1px solid rgba(180, 60, 50, 0.4);
+    padding: 2px 10px; border-radius: 4px;
+    margin-bottom: 10px;
+  }
+  .card h3 {
+    font-size: 16px; font-weight: 600;
+    color: #c49a5a;
+    margin-bottom: 8px;
+    letter-spacing: 2px;
+  }
+  .card p {
+    font-size: 13px; line-height: 1.9;
+    color: rgba(232, 220, 200, 0.75);
+  }
+
+  /* =========== 列表 =========== */
+  .list-item {
+    display: flex; gap: 12px;
+    padding: 14px 0;
+    border-bottom: 1px solid rgba(196, 154, 90, 0.1);
+    animation: fadeUp 0.6s ease both;
+  }
+  .list-item:last-child { border-bottom: none; }
+  .list-item .icon {
+    flex-shrink: 0;
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(180, 60, 50, 0.3), rgba(196, 154, 90, 0.2));
+    border: 1px solid rgba(196, 154, 90, 0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; color: #c49a5a; font-weight: bold;
+  }
+  .list-item .content h4 {
+    font-size: 14px; font-weight: 600;
+    color: #e8dcc8; margin-bottom: 4px;
+  }
+  .list-item .content p {
+    font-size: 12px; line-height: 1.7;
+    color: rgba(232, 220, 200, 0.6);
+  }
+
+  /* =========== 数字统计 =========== */
+  .stat-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 12px; margin-top: 16px;
+  }
+  .stat-item {
+    text-align: center;
+    padding: 18px 10px;
+    background: rgba(196, 154, 90, 0.06);
+    border: 1px solid rgba(196, 154, 90, 0.12);
+    border-radius: 10px;
+    animation: fadeUp 0.8s ease both;
+  }
+  .stat-item .num {
+    font-size: 28px; font-weight: 900;
+    background: linear-gradient(135deg, #c49a5a, #b43c32);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 4px;
+  }
+  .stat-item .label {
+    font-size: 11px; color: rgba(232, 220, 200, 0.5);
+    letter-spacing: 1px;
+  }
+
+  /* =========== 三部曲 =========== */
+  .trilogy { display: flex; gap: 10px; margin-top: 10px; }
+  .trilogy .item {
+    flex: 1; text-align: center;
+    padding: 24px 8px;
+    background: rgba(196, 154, 90, 0.05);
+    border: 1px solid rgba(196, 154, 90, 0.15);
+    border-radius: 12px;
+    animation: fadeUp 0.8s ease both;
+  }
+  .trilogy .big-char {
+    font-size: 48px; font-weight: 900;
+    background: linear-gradient(180deg, #e8dcc8 30%, #c49a5a 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+    font-family: "STKaiti", "KaiTi", serif;
+  }
+  .trilogy .label {
+    font-size: 11px; color: #c49a5a; letter-spacing: 2px;
+    margin-bottom: 4px;
+  }
+  .trilogy .desc {
+    font-size: 10px; color: rgba(232, 220, 200, 0.5);
+  }
+
+  /* =========== 四原则 =========== */
+  .principle-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 12px; margin-top: 10px;
+  }
+  .principle {
+    padding: 16px;
+    background: rgba(196, 154, 90, 0.05);
+    border-left: 3px solid #b43c32;
+    border-radius: 0 10px 10px 0;
+    animation: fadeUp 0.6s ease both;
+  }
+  .principle .num {
+    font-size: 22px; font-weight: 900;
+    color: rgba(180, 60, 50, 0.4);
+    font-family: "STKaiti", "KaiTi", serif;
+  }
+  .principle h4 {
+    font-size: 14px; color: #c49a5a;
+    margin: 4px 0; letter-spacing: 2px;
+  }
+  .principle p {
+    font-size: 11px; color: rgba(232, 220, 200, 0.6);
+    line-height: 1.6;
+  }
+
+  /* =========== 四步法流程 =========== */
+  .flow-steps { margin-top: 12px; }
+  .flow-step {
+    display: flex; gap: 14px;
+    animation: fadeUp 0.6s ease both;
+  }
+  .flow-step .step-num {
+    flex-shrink: 0;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #b43c32, #c49a5a);
+    color: #1a1410; font-weight: bold;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px;
+  }
+  .flow-step .step-content { flex: 1; padding-bottom: 18px; border-bottom: 1px dashed rgba(196, 154, 90, 0.2); }
+  .flow-step:last-child .step-content { border-bottom: none; padding-bottom: 0; }
+  .flow-step h4 {
+    font-size: 14px; color: #c49a5a;
+    margin-bottom: 4px; letter-spacing: 2px;
+  }
+  .flow-step p {
+    font-size: 12px; color: rgba(232, 220, 200, 0.6);
+    line-height: 1.7;
+  }
+
+  /* =========== 传播矩阵 =========== */
+  .platform-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 12px; margin-top: 12px;
+  }
+  .platform {
+    padding: 14px;
+    border-radius: 10px;
+    border: 1px solid rgba(196, 154, 90, 0.15);
+    animation: fadeUp 0.6s ease both;
+  }
+  .platform.douyin { background: rgba(0, 0, 0, 0.4); }
+  .platform.bilibili { background: rgba(252, 114, 153, 0.06); border-color: rgba(252, 114, 153, 0.2); }
+  .platform.xiaohongshu { background: rgba(255, 50, 50, 0.06); border-color: rgba(255, 50, 50, 0.2); }
+  .platform.offline { background: rgba(196, 154, 90, 0.06); }
+  .platform .p-icon {
+    font-size: 18px; margin-bottom: 6px;
+  }
+  .platform h4 {
+    font-size: 13px; color: #e8dcc8; margin-bottom: 4px;
+  }
+  .platform p {
+    font-size: 11px; color: rgba(232, 220, 200, 0.55); line-height: 1.6;
+  }
+
+  /* =========== 结语页 =========== */
+  .ending { align-items: center; justify-content: center; text-align: center; }
+  .ending .big-seal {
+    width: 100px; height: 100px;
+    border: 4px solid #b43c32;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    flex-direction: column;
+    color: #b43c32; font-weight: bold;
+    transform: rotate(-3deg);
+    box-shadow: 0 0 40px rgba(180, 60, 50, 0.3);
+    margin-bottom: 36px;
+    animation: sealAppear 1.2s ease-out;
+  }
+  .ending .big-seal .ch { font-size: 28px; letter-spacing: 4px; }
+  .ending .big-seal .sub { font-size: 9px; letter-spacing: 2px; margin-top: 2px; }
+  .ending h2 {
+    font-size: 24px; letter-spacing: 8px;
+    color: #c49a5a; margin-bottom: 20px;
+    animation: fadeUp 1s ease 0.3s both;
+  }
+  .ending .quote {
+    font-size: 14px; line-height: 2.2;
+    color: rgba(232, 220, 200, 0.7);
+    max-width: 300px;
+    animation: fadeUp 1s ease 0.5s both;
+  }
+  .ending .quote .highlight { color: #b43c32; }
+  .ending .credit {
+    margin-top: 50px;
+    font-size: 11px; letter-spacing: 3px;
+    color: rgba(232, 220, 200, 0.35);
+    animation: fadeUp 1s ease 0.7s both;
+  }
+
+  /* =========== 动画延迟 =========== */
+  .delay-1 { animation-delay: 0.15s; }
+  .delay-2 { animation-delay: 0.3s; }
+  .delay-3 { animation-delay: 0.45s; }
+  .delay-4 { animation-delay: 0.6s; }
+  .delay-5 { animation-delay: 0.75s; }
+  .delay-6 { animation-delay: 0.9s; }
+
+  /* 滚动条样式 */
+  .page::-webkit-scrollbar { width: 3px; }
+  .page::-webkit-scrollbar-track { background: transparent; }
+  .page::-webkit-scrollbar-thumb { background: rgba(196, 154, 90, 0.3); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div class="bg-paper"></div>
+<div class="bg-texture"></div>
+
+<!-- 导航指示器 -->
+<div class="nav-dots" id="navDots"></div>
+<div class="page-num">
+  <span class="current" id="pageCurrent">01</span>
+  <span id="pageTotal">/ 12</span>
+</div>
+
+<!-- ======== Page 1: 封面 ======== -->
+<section class="page cover active" data-page="1">
+  <div class="seal">俗韵</div>
+  <h1>俗韵新声</h1>
+  <div class="subtitle">NON-HERITAGE · VOICE</div>
+  <div class="ink-line"></div>
+  <div class="desc">
+    以影像为笔，以青年为声<br>
+    让巴蜀非遗，在数字时代<br>
+    找到属于它的，新的回响
+  </div>
+  <div class="swipe-hint">↑ 上滑翻页 ↑</div>
+</section>
+
+<!-- ======== Page 2: 研究背景 ======== -->
+<section class="page" data-page="2">
+  <div class="page-header">
+    <div class="en">RESEARCH BACKGROUND</div>
+    <h2>研究背景</h2>
+    <div class="line-ornament"></div>
+  </div>
+
+  <div class="card delay-1">
+    <div class="tag">时代之问</div>
+    <h3>传承主体老龄化</h3>
+    <p>非遗传承人平均年龄超过 55 岁，青年群体普遍缺乏参与感，传统技艺面临"人亡艺绝"的严峻挑战。</p>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-item delay-2">
+      <div class="num">74</div>
+      <div class="label">非遗影像记录(项)</div>
+    </div>
+    <div class="stat-item delay-3">
+      <div class="num">500+</div>
+      <div class="label">申报非遗项目</div>
+    </div>
+  </div>
+
+  <div class="card delay-4">
+    <div class="tag">媒介失语</div>
+    <h3>传统传播渠道的困境</h3>
+    <p>巴蜀非遗长期依赖图文、电视等传统渠道，难以适配短视频与直播时代的传播逻辑，影像与新媒体之间断层日益显现。</p>
+  </div>
+</section>
+
+<!-- ======== Page 3: 核心理论 ======== -->
+<section class="page" data-page="3">
+  <div class="page-header">
+    <div class="en">THEORETICAL FRAMEWORK</div>
+    <h2>核心理论</h2>
+    <div class="line-ornament"></div>
+  </div>
+
+  <div class="card delay-1">
+    <div class="tag">CORE CONCEPT</div>
+    <h3>媒介再生产</h3>
+    <p>借鉴布迪厄"场域"理论，影像作为当代图像语言，对传统文化进行涵义化转译——不停留在字面描述，而是被塑造为"第二文本"再叙事。</p>
+  </div>
+
+  <div class="list-item delay-2">
+    <div class="icon">01</div>
+    <div class="content">
+      <h4>动态传承与数字基因</h4>
+      <p>数字化存储、标签化还原、元数据伦理，让非遗在数字世界中拥有可传承的"基因"</p>
+    </div>
+  </div>
+
+  <div class="list-item delay-3">
+    <div class="icon">02</div>
+    <div class="content">
+      <h4>代际记忆与情感共鸣</h4>
+      <p>通过影像建立情感连接，而非纪录片的旁观姿态，以创作者的年轻经验为情感入口</p>
+    </div>
+  </div>
+
+  <div class="list-item delay-4">
+    <div class="icon">03</div>
+    <div class="content">
+      <h4>建立亲密连接</h4>
+      <p>在传统与个体之间找到对话，让文化不再是遥远的概念，而是可触摸的情感记忆</p>
+    </div>
+  </div>
+</section>
+
+<!-- ======== Page 4: 研究问题 ======== -->
+<section class="page" data-page="4">
+  <div class="page-header">
+    <div class="en">RESEARCH QUESTIONS</div>
+    <h2>核心研究问题</h2>
+    <div class="line-ornament"></div>
+  </div>
+
+  <div class="card delay-1" style="border-left: 3px solid #b43c32;">
+    <div class="tag">QUESTION · 壹</div>
+    <h3>情感连接何以可能？</h3>
+    <p style="font-size: 14px;">如何以<strong style="color:#c49a5a;">情感叙事</strong>驱动青年文化认同？<br>让传统文化不再是"听说过"，而是"感动过"。</p>
+  </div>
+
+  <div class="card delay-2" style="border-left: 3px solid #c49a5a;">
+    <div class="tag">QUESTION · 贰</div>
+    <h3>范式创新何以复制？</h3>
+    <p style="font-size: 14px;">能否沉淀为<strong style="color:#c49a5a;">地域民俗年轻化</strong>的可复制样本？<br>为其他地区的非遗活化提供参照。</p>
+  </div>
+
+  <div class="stat-grid delay-3">
+    <div class="stat-item">
+      <div class="num" style="font-size:20px;">青年视角</div>
+      <div class="label">第一人称创作</div>
+    </div>
+    <div class="stat-item">
+      <div class="num" style="font-size:20px;">情感先行</div>
+      <div class="label">感动 > 了解</div>
+    </div>
+  </div>
+</section>
+
+<!-- ======== Page 5: 创作方法论 - 四原则 ======== -->
+<section class="page" data-page="5">
+  <div class="page-header">
+    <div class="en">METHODOLOGY · I</div>
+    <h2>媒介生产四原则</h2>
+    <div class="line-ornament"></div>
+  </div>
+
+  <div class="principle-grid">
+    <div class="principle delay-1">
+      <div class="num">壹</div>
+      <h4>主体性</h4>
+      <p>以我观俗<br>第一视角记录</p>
+    </div>
+    <div class="principle delay-2">
+      <div class="num">贰</div>
+      <h4>转译性</h4>
+      <p>符号重组<br>蒙太奇·声画重编码</p>
+    </div>
+    <div class="principle delay-3">
+      <div class="num">叁</div>
+      <h4>对话性</h4>
+      <p>古今交织<br>古老形式与青年审美对位</p>
+    </div>
+    <div class="principle delay-4">
+      <div class="num">肆</div>
+      <h4>参与性</h4>
+      <p>参与式记录<br>设置互动话题共创空间</p>
+    </div>
+  </div>
+
+  <div class="card delay-5" style="margin-top:16px;">
+    <div class="tag">FIELDWORK</div>
+    <h3>田野采风</h3>
+    <p>主动进入民俗语境，捕捉最鲜活的声音与空间氛围——铜梁龙舞、秀山花灯、酉阳摆手舞……让镜头里有温度，有呼吸。</p>
+  </div>
+</section>
+
+<!-- ======== Page 6: 影像转译四步法 ======== -->
+<section class="page" data-page="6">
+  <div class="page-header">
+    <div class="en">METHODOLOGY · II</div>
+    <h2>影像转译四步法</h2>
+    <div class="line-ornament"></div>
+  </div>
+
+  <div class="flow-steps">
+    <div class="flow-step delay-1">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h4>素材采集</h4>
+        <p>从海量田野素材中，提取最具共情力的<strong>"情感核"</strong>——一个眼神、一段唱腔、一双布满老茧的手</p>
+      </div>
+    </div>
+    <div class="flow-step delay-2">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h4>视觉编码</h4>
+        <p>暖灰色调奠定质感，开篇与结尾创造节奏张力，让每一帧都承载情感重量</p>
+      </div>
+    </div>
+    <div class="flow-step delay-3">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h4>叙事建构</h4>
+        <p>悬念式结构引导沉浸，以青年视角提供完整体验——让观众不是"看客"，而是"见证者"</p>
+      </div>
+    </div>
+    <div class="flow-step delay-4">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h4>叙事重构</h4>
+        <p>以<strong>"青年寻找乡愁"</strong>隐喻贯穿全片，将个体情感升华为集体记忆的共鸣</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ======== Page 7: 作品呈现 - 三部曲 ======== -->
+<section class="page" data-page="7">
+  <div class="page-header">
+    <div class="en">ARTWORK TRILOGY</div>
+    <h2>作品三部曲</h2>
+    <div class="line-ornament"></div>
+  </div>
+
+  <div class="trilogy">
+    <div class="item delay-1">
+      <div class="big-char">火</div>
+      <div class="label">VISION</div>
+      <div class="desc">视觉维度</div>
+    </div>
+    <div class="item delay-2">
+      <div class="big-char">听</div>
+      <div class="label">SOUND</div>
+      <div class="desc">听觉维度</div>
+    </div>
+    <div class="item delay-3">
+      <div class="big-char">续</div>
+      <div class="label">EXPERIENCE</div>
+      <div class="desc">体验维度</div>
+    </div>
+  </div>
+
+  <div class="card delay-4" style="margin-top:16px;">
+    <div class="tag">WORKS</div>
+    <h3>纪录片与展映</h3>
+    <p><strong style="color:#c49a5a;">《影像民族志》</strong>——20集纪录片展映代表性非遗项目<br>
+    <strong style="color:#c49a5a;">《吾乡》</strong>——双线并行，历史与当下影像叙事实现跨文化对话</p>
+  </div>
+
+  <div class="card delay-5">
+    <div class="tag">REFERENCE</div>
+    <h3>素材参考与灵感</h3>
+    <p>李子柒式"隐逸诗派"叙事 · 微短剧花哨情感叙事样本 · 民谣段子、母子声线等情感核提取</p>
+  </div>
+</section>
+
+<!-- ======== Page 8: 数据支撑 ======== -->
+<section class="page" data-page="8">
+  <div class="page-header">
+    <div class="en">DATA SUPPORT</div>
+    <h2>平台数据支撑</h2>
+    <div class="line-ornament"></div>
+  </div>
+
+  <div class="card delay-1">
+    <div class="tag">DOUYIN · 2025</div>
+    <h3>抖音非遗数据报告</h3>
+    <p>非遗类目持续爆发，创作群体年轻化趋势明显</p>
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-item delay-2">
+      <div class="num">749亿</div>
+      <div class="label">非遗内容播放量</div>
+    </div>
+    <div class="stat-item delay-3">
+      <div class="num">+95%</div>
+      <div class="label">新增非遗类目增长</div>
+    </div>
+    <div class="stat-item delay-4">
+      <div class="num">+59%</div>
+      <div class="label">非遗直播同比增长</div>
+    </div>
+    <div class="stat-item delay-5">
+      <div class="num">+1625%</div>
+      <div class="label">AI类非遗视频增长</div>
+    </div>
+  </div>
+
+  <div class="card delay-6" style="margin-top:14px;">
+    <div class="tag">FIELD MATERIAL</div>
+    <h3>田野实景素材池</h3>
+    <p>覆盖铜梁、奔山、酉阳等地的丰富影像素材，为创作提供扎实的在地基础</p>
+  </div>
+</section>
+
+<!-- ======== Page 9: 传播策略 ======== -->
+<section class="page" data-page="9">
+  <div class="page-header">
+    <div class="en">COMMUNICATION STRATEGY</div>
+    <h2>多平台传播矩阵</h2>
+    <div class="line-ornament"></div>
+  </div>
+
+  <div class="platform-grid">
+    <div class="platform douyin delay-1">
+      <div class="p-icon">🎵</div>
+      <h4>抖音短视频</h4>
+      <p>15-60秒精华片段<br>设定冲型文案</p>
+    </div>
+    <div class="platform bilibili delay-2">
+      <div class="p-icon">📺</div>
+      <h4>B站中长视频</h4>
+      <p>展示创作方法论<br>深度解读内容</p>
+    </div>
+    <div class="platform xiaohongshu delay-3">
+      <div class="p-icon">📕</div>
+      <h4>小红书图文</h4>
+      <p>"我的知识"系列<br>建立关注粘性</p>
+    </div>
+    <div class="platform offline delay-4">
+      <div class="p-icon">🏮</div>
+      <h4>线下联动</h4>
+      <p>在地传习所合作<br>沉浸式工作坊</p>
+    </div>
+  </div>
+
+  <div class="card delay-5" style="margin-top:14px;">
+    <div class="tag">CLOSED LOOP</div>
+    <h3>线上线下闭环</h3>
+    <p>线上流量引导线下社区参与，线下体验反哺线上内容创作——形成可持续的传播生态。</p>
+  </div>
+</section>
+
+<!-- ======== Page 10: 创新价值 ======== -->
+<section class="page" data-page="10">
+  <div class="page-header">
+    <div class="en">INNOVATION VALUE</div>
+    <h2>创新价值</h2>
+    <div class="line-ornament"></div>
+  </div>
+
+  <div class="card delay-1">
+    <div class="tag">THEORETICAL</div>
+    <h3>理论贡献</h3>
+    <p>补充影视传达理论框架，打通<strong style="color:#c49a5a;">"感通 → 叙事 → 传播 → 再生产"</strong>四路径，为非遗影像研究提供新视角。</p>
+  </div>
+
+  <div class="card delay-2">
+    <div class="tag">VERIFICATION</div>
+    <h3>途径验证</h3>
+    <p>验证<strong style="color:#c49a5a;">"情感先行"</strong>策略的有效性——让受众先被感动，再去了解非遗、认同文化。</p>
+  </div>
+
+  <div class="card delay-3">
+    <div class="tag">PRACTICE</div>
+    <h3>实践效能</h3>
+    <p>覆盖主体 · 引领素材 · 新媒体生态<strong style="color:#c49a5a;">三角验证</strong>可行，为同类项目提供方法论参照。</p>
+  </div>
+
+  <div class="card delay-4" style="background: linear-gradient(135deg, rgba(180, 60, 50, 0.12) 0%, rgba(196, 154, 90, 0.06) 100%); border-color: rgba(180, 60, 50, 0.3);">
+    <div class="tag" style="border-color:#b43c32; color:#b43c32;">SUSTAINABILITY</div>
+    <h3>可持续模式</h3>
+    <p>内容生产 → 受众反馈 → 迭代进化 → 社区空间<br><strong style="color:#c49a5a;">正向循环</strong>，让非遗在数字时代生生不息。</p>
+  </div>
+</section>
+
+<!-- ======== Page 11: 研究局限 ======== -->
+<section class="page" data-page="11">
+  <div class="page-header">
+    <div class="en">LIMITATIONS & FUTURE</div>
+    <h2>局限与未来</h2>
+    <div class="line-ornament"></div>
+  </div>
+
+  <div class="list-item delay-1">
+    <div class="icon">?</div>
+    <div class="content">
+      <h4>符号转译边界</h4>
+      <p>解构重组是否会消解文化真实性？如何在创新与守正之间把握平衡？</p>
+    </div>
+  </div>
+  <div class="list-item delay-2">
+    <div class="icon">!</div>
+    <div class="content">
+      <h4>伦理评估难题</h4>
+      <p>家族禁忌话题（如年节习俗）公开播放的边界在哪里？知情同意机制需进一步完善。</p>
+    </div>
+  </div>
+  <div class="list-item delay-3">
+    <div class="icon">△</div>
+    <div class="content">
+      <h4>样本有限性</h4>
+      <p>地域局限与三线样本是否足以支撑"可复制模式"的结论？需更多验证。</p>
+    </div>
+  </div>
+  <div class="list-item delay-4">
+    <div class="icon">◎</div>
+    <div class="content">
+      <h4>效果评价待深化</h4>
+      <p>播放量与点赞不等同于文化认同，缺少严谨的受众研究方法。</p>
+    </div>
+  </div>
+
+  <div class="card delay-5" style="margin-top:10px; background:rgba(180,60,50,0.08); border-color:rgba(180,60,50,0.2);">
+    <div class="tag">NEXT PHASE</div>
+    <h3>下一阶段计划</h3>
+    <p>明确情感点与影像叙事理论 → 细化元数据标注本体 → 设计小规模受众反馈实验并采集数据</p>
+  </div>
+</section>
+
+<!-- ======== Page 12: 结语 ======== -->
+<section class="page ending" data-page="12">
+  <div class="big-seal">
+    <span class="ch">续</span>
+    <span class="sub">CONTINUITY</span>
+  </div>
+  <h2>俗韵有新声</h2>
+  <div class="quote">
+    我们相信，<br>
+    古老的韵致可以找到<br>
+    <span class="highlight">年轻的耳朵</span>
+    <br><br>
+    不是让传统停在博物馆里，<br>
+    而是让它在每一次观看、每一次分享中，<br>
+    继续生长。
+  </div>
+  <div class="ink-line" style="margin-top:50px;"></div>
+  <div class="credit">
+    俗韵新声 · 非遗影像研究项目<br>
+    Sichuan · Intangible Cultural Heritage
+  </div>
+</section>
+
+<script>
+(function() {
+  const pages = document.querySelectorAll('.page');
+  const totalPages = pages.length;
+  let currentPage = 0;
+  let isAnimating = false;
+
+  // 创建导航点
+  const navDots = document.getElementById('navDots');
+  for (let i = 0; i < totalPages; i++) {
+    const dot = document.createElement('span');
+    if (i === 0) dot.classList.add('active');
+    navDots.appendChild(dot);
+  }
+  const dots = navDots.querySelectorAll('span');
+
+  document.getElementById('pageTotal').textContent = '/ ' + String(totalPages).padStart(2, '0');
+
+  function goToPage(index) {
+    if (index < 0 || index >= totalPages || isAnimating || index === currentPage) return;
+    isAnimating = true;
+    pages[currentPage].classList.remove('active');
+    pages[index].classList.add('active');
+    dots[currentPage].classList.remove('active');
+    dots[index].classList.add('active');
+    currentPage = index;
+    document.getElementById('pageCurrent').textContent = String(currentPage + 1).padStart(2, '0');
+    setTimeout(() => { isAnimating = false; }, 800);
+  }
+
+  // 触摸滑动
+  let touchStartY = 0;
+  let touchEndY = 0;
+  let lastTouchTime = 0;
+
+  document.addEventListener('touchstart', function(e) {
+    touchStartY = e.changedTouches[0].screenY;
+  }, { passive: true });
+
+  document.addEventListener('touchend', function(e) {
+    const now = Date.now();
+    if (now - lastTouchTime < 800) return; // 防抖
+    lastTouchTime = now;
+    touchEndY = e.changedTouches[0].screenY;
+    const diff = touchStartY - touchEndY;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) {
+        goToPage(currentPage + 1);
+      } else {
+        goToPage(currentPage - 1);
+      }
+    }
+  }, { passive: true });
+
+  // 鼠标滚轮（桌面端预览）
+  let wheelLock = false;
+  document.addEventListener('wheel', function(e) {
+    if (wheelLock) return;
+    wheelLock = true;
+    setTimeout(() => { wheelLock = false; }, 1000);
+    if (Math.abs(e.deltaY) > 30) {
+      if (e.deltaY > 0) {
+        goToPage(currentPage + 1);
+      } else {
+        goToPage(currentPage - 1);
+      }
+    }
+  }, { passive: true });
+
+  // 键盘导航
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === ' ') {
+      e.preventDefault();
+      goToPage(currentPage + 1);
+    } else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') {
+      e.preventDefault();
+      goToPage(currentPage - 1);
+    }
+  });
+
+  // 点击左侧/右侧跳转
+  document.addEventListener('click', function(e) {
+    if (e.target.closest('.nav-dots') || e.target.closest('.page-num')) return;
+    const w = window.innerWidth;
+    if (e.clientX > w * 0.85) {
+      goToPage(currentPage + 1);
+    } else if (e.clientX < w * 0.15) {
+      goToPage(currentPage - 1);
+    }
+  });
+
+  // 自动播放动画（首页加载完后）
+  setTimeout(() => {
+    pages[0].classList.add('active');
+  }, 100);
+})();
+</script>
+
+</body>
+</html>
